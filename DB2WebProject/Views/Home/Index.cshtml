@@ -1,0 +1,88 @@
+﻿@using System.Collections;
+@using System.Text;
+
+@model DB2WebProject.Models.IndexViewModel;
+@{
+	Layout = null;
+	ViewData["Title"] = "Сводка по отзывам";
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+	<title>@ViewData["Title"]</title>
+	<style>
+		.content
+		{
+			margin: 9vh 0 0 1vw;
+		}
+		.headerWrapper
+		{
+			background-color: rosybrown;
+			position: fixed;
+			top: 0;
+			left: 0;
+			white-space: nowrap;
+			z-index: 100;
+			width: 100%;
+			height: 8vh;
+			display: flex;
+			flex-direction: row;
+			align-items: center;
+		}
+		.headerForm
+		{
+			display: inline-block;
+			float: right;
+			margin-left: auto;
+			margin-right: 3vw
+		}
+	</style>
+</head>
+<body>
+<div class="headerWrapper">
+	<span style="text-align: left; margin-left: 3vw; display: inline-block">
+		Частота слов о товаре по отзывам
+	</span>
+	@if (!Model.loggedIn)
+	{
+		<span class="headerForm">
+			<form action="~/Home/Signup" method="get">
+				<input type="submit" value="Вход в&#10личный кабинет">
+			</form>
+		</span>
+	}
+</div>
+<div class="content">
+	<div>
+		@using (Html.BeginForm("productLinkSubmit", "Home", FormMethod.Post))
+		{
+			@Html.Label("Вставьте сюда ссылку на товар") <br />
+			<input type="url" name="uri" required>
+			<p>
+				<input type="submit" value="Получить сводку">
+			</p>
+		}
+	</div>
+</div>
+@if (Model.wordsToFreq.Count > 0)
+{
+	@if (Model.loggedIn)
+	{
+		<form method="post">
+			@Html.Label("Если у Вас есть аккаунт - Вы можете сохранить на нем этот список\n" +
+						"а также задать ему название для более простого поиска.");
+			<input type="submit" value="Сохранить список">
+		</form>
+	}
+	<p>
+		<ul>
+		@foreach (string word in Model.wordsToFreq.Keys)
+		{
+			<li>@word : @Convert.ToString(Model.wordsToFreq[word])</li>
+		}
+		</ul>
+	</p>
+}
+</body>
+</html>
