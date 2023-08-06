@@ -5,7 +5,7 @@ namespace DB2WebProject.DBTools
 	public class DBConnection
 	{
 		private string connectionString = "Host=localhost;Port=5432;Database=reviewSummaryProjectDB;" +
-			"User ID=postgres;Password=220702;Include Error Detail=true";
+			"User ID=postgres;Password=Post21era;Include Error Detail=true";
 		private NpgsqlConnection connectionInstance;
 		private static readonly DBConnection dBConnection = new DBConnection();
 

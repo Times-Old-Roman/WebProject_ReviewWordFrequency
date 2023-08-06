@@ -12,6 +12,7 @@ using DB2WebProject.DBTools;
 using Npgsql;
 using System.Text.Json.Nodes;
 using PuppeteerExtraSharp.Plugins.ExtraStealth;
+using System.Text.RegularExpressions;
 
 namespace DB2WebProject.Controllers
 {
@@ -87,24 +88,77 @@ namespace DB2WebProject.Controllers
 			return res.ToArray();
 		}
 
+		private async Task<Dictionary<string, int>> checkAdjective(Dictionary<string, int> wordsToFreq, int count)
+		{
+			var extraOptions = new PuppeteerExtra();
+			extraOptions.Use(new StealthPlugin());
+			LaunchOptions options = new LaunchOptions()
+			{
+				Headless = true,
+				ExecutablePath = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+			};
+			IBrowser browser = await extraOptions.LaunchAsync(options);
+			IPage page = await browser.NewPageAsync();
+
+			var goFunc = page.GoToAsync("https://morphologyonline.ru/");
+			await goFunc;
+			while(!goFunc.IsCompleted) { }
+
+			var submitFunction = (string s) => "async () => { \r\n" +
+				$"	document.querySelectorAll('input[type=\"text\"]')[0].value = \"{s}\";\r\n" +
+				"	document.querySelectorAll('button[type=\"submit\"]')[0].click();\r\n}";
+
+			var checkFunction = "async () => { let arr = document.querySelectorAll('li');\r\n" +
+				"	for (let i = 0; i < arr.length; i++)\r\n" +
+				"		if(arr[i].textContent.includes('имя прилагательное'))\r\n" +
+				"			return true; }";
+
+			List<string> strings = new List<string>(wordsToFreq.Select(s => s.Key).ToList());
+			Dictionary<string, int> topWords = new Dictionary<string, int>();
+			for (int i = 0; i < wordsToFreq.Count; i++)
+			{
+				if (topWords.Count >= count)
+					break;
+				await page.EvaluateFunctionAsync(submitFunction(strings[i]));
+				await page.WaitForNavigationAsync();
+				if(page.EvaluateFunctionAsync<bool>(checkFunction).Result)
+					topWords.Add(strings[i], wordsToFreq[strings[i]]);
+				await page.GoBackAsync();
+			}
+
+			return topWords;
+		}
+
 		private Dictionary<string, int> parseReviews(in List<string> reviews)
 		{
 			Dictionary<string, int> wordsToFreq = new Dictionary<string, int>();
+			List<string> words = new List<string>();
+
 			foreach (string review in reviews)
 			{
 				string[] delimiters = new string[]{ " ", ",", ".", "?", "!", ";", ":", "\"", "\'", "(", ")", "\n", "\r"};
-				string[] words = review.Split(delimiters, options: StringSplitOptions.TrimEntries);
-				foreach (string word in words) 
-				{
-					if (wordsToFreq.ContainsKey(word))
-						wordsToFreq[word]++;
-					else wordsToFreq.Add(word, 1);
-				}
+				string[] splitWords = review.Split(delimiters, options: StringSplitOptions.TrimEntries);
+				words.AddRange(splitWords);
 			}
-			foreach (string word in wordsToFreq.Keys)
-				if (word.Any(Char.IsDigit))
-					wordsToFreq.Remove(word);
-			wordsToFreq.Remove("");
+			
+			for (int i = 0; i < words.Count; i++)
+			{
+				if (!Regex.IsMatch(words[i], "^[А-Яа-я]+$"))
+				{
+					words.RemoveAt(i);
+					i--;
+				}
+				else
+					words[i] = String.Concat(words[i][0].ToString().ToUpper(), words[i].Substring(1));
+			}
+			
+			foreach (string word in words) 
+			{
+				if (wordsToFreq.ContainsKey(word))
+					wordsToFreq[word]++;
+				else wordsToFreq.Add(word, 1);
+			}
+
 			return wordsToFreq.OrderBy(x => -x.Value).ToDictionary(x => x.Key, x => x.Value);
 		}
 
@@ -136,7 +190,8 @@ namespace DB2WebProject.Controllers
 			foreach (string review in reviewsGet)
 				reviews.Add(review);
 
-			model.wordsToFreq = parseReviews(reviews);
+			Dictionary<string, int> dic = parseReviews(reviews);
+			model.wordsToFreq = checkAdjective(dic, Math.Min(10, dic.Count)).Result;
 
 			return View("Index", model);
         }
