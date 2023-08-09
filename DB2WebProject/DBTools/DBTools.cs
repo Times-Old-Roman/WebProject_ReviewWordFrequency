@@ -31,5 +31,11 @@ namespace DB2WebProject.DBTools
 			NpgsqlCommand command = new NpgsqlCommand(sqlCommand, connectionInstance);
 			command.ExecuteNonQuery();
 		}
+
+		public void Update(string sqlCommand)
+		{
+			NpgsqlCommand command = new NpgsqlCommand(sqlCommand, connectionInstance);
+			command.ExecuteNonQuery();
+		}
 	}
 }

@@ -40,49 +40,76 @@
 	</style>
 </head>
 <body>
-<div class="headerWrapper">
-	<span style="text-align: left; margin-left: 3vw; display: inline-block">
-		Частота слов о товаре по отзывам
-	</span>
-	@if (!Model.loggedIn)
-	{
-		<span class="headerForm">
-			<form action="~/Home/Signup" method="get">
-				<input type="submit" value="Вход в&#10личный кабинет">
-			</form>
+	<div class="headerWrapper">
+		<span style="text-align: left; margin-left: 3vw; display: inline-block">
+			Частота слов о товаре по отзывам
 		</span>
-	}
-</div>
-<div class="content">
-	<div>
-		@using (Html.BeginForm("productLinkSubmit", "Home", FormMethod.Post))
+		@if (!Model.loggedIn)
 		{
-			@Html.Label("Вставьте сюда ссылку на товар") <br />
-			<input type="url" name="uri" required>
-			<p>
-				<input type="submit" value="Получить 10 самых популярных слов о товаре">
-			</p>
+			<span class="headerForm">
+				<form action="~/Home/Signup" method="get">
+					<input type="submit" value="Вход в&#10личный кабинет">
+				</form>
+			</span>
+		}
+		else
+		{
+			<span class="headerForm">
+				@Html.ActionLink("Личный кабинет", "profile", "Home")
+			</span>
 		}
 	</div>
-</div>
-@if (Model.wordsToFreq.Count > 0)
-{
-	@if (Model.loggedIn)
-	{
-		<form method="post">
-			@Html.Label("Если у Вас есть аккаунт - Вы можете сохранить на нем этот список\n" +
-						"а также задать ему название для более простого поиска.");
-			<input type="submit" value="Сохранить список">
-		</form>
-	}
-	<p>
-		<ul>
-		@foreach (string word in Model.wordsToFreq.Keys)
+	<div class="content">
+		<div>
+			@using (Html.BeginForm("productLinkSubmit", "Home", FormMethod.Post))
+			{
+				@Html.Label("Вставьте сюда ссылку на товар") <br />
+				@if (TempData["productURL"] != null)
+				{
+					<input type="url" name="uri" value="@TempData["productURL"]" required>
+				}
+				else
+				{
+					<input type="url" name="uri" required>
+				}
+				<p>
+					<input type="submit" value="Получить 10 самых популярных слов о товаре">
+				</p>
+			}
+		</div>
+		@if(!Model.loggedIn)
 		{
-			<li>@word : @Convert.ToString(Model.wordsToFreq[word])</li>
+			<p>
+				Eсли у Вас есть аккаунт - Вы можете сохранить на нем этот список
+				а также задать ему название для более простого поиска
+			</p>
 		}
-		</ul>
-	</p>
-}
+		<p>
+		@if (Model.wordsToFreq.Count > 0)
+		{
+			@if (Model.loggedIn && (TempData["saved"] is null ? true : !(bool)TempData["saved"]))
+			{
+				@using (Html.BeginForm("saveToProfile", "Home", FormMethod.Post))
+				{
+					<input type="text" name="productName">
+					<textarea name="userComment"></textarea>
+					<input type="submit" value="Сохранить список">
+				}
+			}
+			@if (TempData["saved"] is null ? false : (bool)TempData["saved"])
+			{
+				<p>
+					Сводка успешно сохранена!
+				</p>
+			}
+			<ul>
+			@foreach (string word in Model.wordsToFreq.Keys)
+			{
+				<li>@word : @Convert.ToString(Model.wordsToFreq[word])</li>
+			}
+			</ul>
+		}
+		</p>
+	</div>
 </body>
 </html>

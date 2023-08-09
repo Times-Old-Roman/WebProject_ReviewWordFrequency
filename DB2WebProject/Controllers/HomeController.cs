@@ -18,7 +18,7 @@ namespace DB2WebProject.Controllers
 {
 	public class HomeController : Controller
 	{
-		IndexViewModel model = new IndexViewModel(false);
+		private static IndexViewModel model;
 
 		private async Task<string[]> getData(string website, string link)
 		{
@@ -165,8 +165,14 @@ namespace DB2WebProject.Controllers
         [HttpGet]
 		public IActionResult Index()
 		{
+			if (model == null)
+				model = new IndexViewModel(false);
+
 			if (TempData["loggedIn"] is not null)
+			{
 				model.loggedIn = (bool)TempData["loggedIn"];
+				model.username = (string)TempData["user"];
+			}
 
 			return View(model);
 		}
@@ -182,7 +188,7 @@ namespace DB2WebProject.Controllers
         {
 			string link = uri.ToString();
 			string website = uri.Host.ToString();
-			
+
 			List<string> reviews = new List<string>();
 			Task<string[]> getDataProcess = getData(website, link);
 			string[] reviewsGet = getDataProcess.Result;
@@ -193,8 +199,46 @@ namespace DB2WebProject.Controllers
 			Dictionary<string, int> dic = parseReviews(reviews);
 			model.wordsToFreq = checkAdjective(dic, Math.Min(10, dic.Count)).Result;
 
+			TempData["productURL"] = link;
+			model.uriToProduct = uri;
+
 			return View("Index", model);
         }
+
+		[HttpPost]
+		public IActionResult saveToProfile(string productName, string userComment)
+		{
+			StringBuilder summary = new StringBuilder();
+			foreach (string s in model.wordsToFreq.Keys)
+				summary.Append(s + ", ");
+			summary.Remove(summary.Length - 2, 2);
+			NpgsqlDataReader reader = DBConnection.getConnection().Select(
+				$"SELECT * FROM users.product_summary " +
+				$"WHERE username = '{model.username}' AND link = '{model.uriToProduct}'");
+			if (reader.Read())
+			{
+				reader.Close();
+				DBConnection.getConnection().Update(
+				$"UPDATE users.product_summary " +
+				$"SET product_name = '{productName}', summary = '{summary}', " +
+				$"user_comment = '{userComment}' " +
+				$"WHERE username = '{model.username}' AND link = '{model.uriToProduct}'");
+			}
+			else DBConnection.getConnection().Insert($"INSERT INTO " +
+				$"users.product_summary(link, product_name, summary, user_comment, username, website) " +
+				$"VALUES ('{model.uriToProduct}', '{productName}', '{summary}', '{userComment}', " +
+				$"'{model.username}', '{model.uriToProduct.Host}')");
+
+			TempData["saved"] = true;
+			return View("Index", model);
+		}
+
+		[HttpGet]
+		public IActionResult profile()
+		{
+			TempData["username"] = model.username;
+			return Redirect("~/Profile/Profile");
+		}
 
 		[ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
 		public IActionResult Error()

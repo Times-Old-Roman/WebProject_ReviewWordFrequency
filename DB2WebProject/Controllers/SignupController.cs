@@ -15,7 +15,8 @@ namespace DB2WebProject.Controllers
 
 		private bool SignupUsernameCheck(string username)
 		{
-			NpgsqlDataReader reader = connection.Select($"SELECT username FROM users.user WHERE username = '{username}'");
+			NpgsqlDataReader reader = connection.Select($"SELECT username FROM users.user " +
+				$"WHERE username = '{username}'");
 			bool userExists = reader.Read();
 			reader.Close();
 			return userExists;
@@ -23,7 +24,8 @@ namespace DB2WebProject.Controllers
 
 		private bool LogIn(string username, string password)
 		{
-			NpgsqlDataReader reader = connection.Select($"SELECT password FROM users.user WHERE username = '{username}'");
+			NpgsqlDataReader reader = connection.Select($"SELECT password FROM users.user " +
+				$"WHERE username = '{username}'");
 			bool userExists = reader.Read();
 			bool correctPassword = userExists ? reader.GetString(0) == password : false;
 			reader.Close();
@@ -33,7 +35,6 @@ namespace DB2WebProject.Controllers
 		[HttpGet]
 		public IActionResult Signup()
         {
-			Console.WriteLine(model.signupMode);
             return View(model);
         }
 
@@ -70,6 +71,7 @@ namespace DB2WebProject.Controllers
 					throw ex;
 				}
 				TempData["loggedIn"] = true;
+				TempData["user"] = user.username;
 				return LocalRedirect("~/Home/Index");
 			}
 
@@ -77,6 +79,7 @@ namespace DB2WebProject.Controllers
 			if (correctInfo)
 			{
 				TempData["loggedIn"] = true;
+				TempData["user"] = user.username;
 				return RedirectToAction("Index", "Home");
 			}
 			ModelState.AddModelError("username", "Имя пользователя или пароль введены неверно");

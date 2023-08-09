@@ -1,4 +1,51 @@
-﻿@{
+﻿@model ProfileViewModel
+@{
 	Layout = null;
 	ViewData["Title"] = "Личный кабинет";
 }
+
+<!DOCTYPE html>
+<html>
+<head>
+	<title>@ViewData["Title"]</title>
+</head>
+<body>
+	<ul>
+		@for (int i = 0; i < Model.productSummaries.Count; i++)
+		{
+			<li>
+				@if (TempData["expandedItem"] is not null)
+				{
+					@if(i == (int)TempData["expandedItem"])
+					{
+						<p>
+							@(Model.productSummaries[i].productName != "" ?
+								"Название: " + Model.productSummaries[i].productName :
+								"Ссылка: " + Model.productSummaries[i].link)
+						</p>
+						<p>
+							Сводка: @Model.productSummaries[i].summary
+						</p>
+						<p>
+							Ваш комментарий: @Model.productSummaries[i].userComment
+						</p>
+						continue;
+					}
+				}
+				@if (Model.productSummaries[i].productName != "")
+				{
+					<a asp-controller="Profile" asp-action="Profile" asp-route-id="@i">
+						@Model.productSummaries[i].productName
+					</a>
+				}
+				else
+				{
+					<a asp-controller="Profile" asp-action="Profile" asp-route-id="@i">
+						@Model.productSummaries[i].link
+					</a>
+				}
+			</li>
+		}
+	</ul>
+</body>
+</html>
